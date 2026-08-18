@@ -1,16 +1,35 @@
+import 'dart:math';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../theme/theme.dart';
 
-class AnalyticsScreen extends StatelessWidget {
+class AnalyticsScreen extends StatefulWidget {
   final List<TransactionModel> transactions;
 
   const AnalyticsScreen({super.key, required this.transactions});
 
+  @override
+  State<AnalyticsScreen> createState() => _AnalyticsScreenState();
+}
+
+class _AnalyticsScreenState extends State<AnalyticsScreen> {
+  int _selectedChartTab = 0; // 0: Donut Chart, 1: Bar Chart
+
+  final List<Color> _chartColors = const [
+    Color(0xFF0284C7), // Sky Blue
+    Color(0xFFF59E0B), // Amber
+    Color(0xFF10B981), // Emerald Green
+    Color(0xFF8B5CF6), // Purple
+    Color(0xFFEC4899), // Pink
+    Color(0xFF64748B), // Slate
+    Color(0xFFF97316), // Orange
+  ];
+
   Map<String, double> get categoryExpenses {
     final Map<String, double> map = {};
-    for (var tx in transactions) {
+    for (var tx in widget.transactions) {
       if (tx.type == TransactionType.expense) {
         map[tx.category] = (map[tx.category] ?? 0.0) + tx.amount;
       }
@@ -57,7 +76,7 @@ class AnalyticsScreen extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Text(
-              'Analisis & Statistik Pengeluaran',
+              'Grafik & Statistik Pengeluaran',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
           ],
@@ -69,26 +88,26 @@ class AnalyticsScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Summary Banner Card
+              // Total Summary Banner Card
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 decoration: RetroTheme.retroBoxDecoration(color: Colors.white),
                 child: Column(
                   children: [
                     const Text(
                       'TOTAL PENGELUARAN BULAN INI',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: RetroTheme.textSecondary,
                         letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       currencyFormat.format(totalExpense),
                       style: const TextStyle(
-                        fontSize: 28,
+                        fontSize: 26,
                         fontWeight: FontWeight.bold,
                         color: RetroTheme.darkCharcoal,
                         letterSpacing: -0.5,
@@ -97,14 +116,127 @@ class AnalyticsScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+
+              // Segmented Chart Toggle Button
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedChartTab = 0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _selectedChartTab == 0 ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: _selectedChartTab == 0
+                                ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2))]
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.donut_large_rounded,
+                                size: 18,
+                                color: _selectedChartTab == 0 ? RetroTheme.primaryBlue : RetroTheme.textSecondary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Grafik Donut',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: _selectedChartTab == 0 ? RetroTheme.primaryBlue : RetroTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _selectedChartTab = 1),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _selectedChartTab == 1 ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: _selectedChartTab == 1
+                                ? const [BoxShadow(color: Color(0x0A000000), blurRadius: 4, offset: Offset(0, 2))]
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.bar_chart_rounded,
+                                size: 18,
+                                color: _selectedChartTab == 1 ? RetroTheme.primaryBlue : RetroTheme.textSecondary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Grafik Batang',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: _selectedChartTab == 1 ? RetroTheme.primaryBlue : RetroTheme.textSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Visual Chart Container with Embedded Legend & Percentage Indicators
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: RetroTheme.retroBoxDecoration(color: Colors.white),
+                child: expenses.isEmpty
+                    ? const SizedBox(
+                        height: 180,
+                        child: Center(
+                          child: Text(
+                            'Belum ada data pengeluaran untuk ditampilkan pada grafik',
+                            style: TextStyle(color: RetroTheme.textSecondary, fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          _selectedChartTab == 0
+                              ? _buildDonutChart(sortedCategories, expenses)
+                              : _buildBarChart(sortedCategories, expenses, currencyFormat),
+                          const SizedBox(height: 18),
+                          const Divider(color: RetroTheme.borderLight, height: 1),
+                          const SizedBox(height: 14),
+                          // Embedded Legend inside Chart Box
+                          _buildChartLegend(sortedCategories),
+                        ],
+                      ),
+              ),
+              const SizedBox(height: 16),
 
               Text(
-                'Persentase Pengeluaran per Kategori',
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 17),
+                'Rincian per Kategori',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 16),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
 
+              // Detailed Category List
               Expanded(
                 child: expenses.isEmpty
                     ? Center(
@@ -118,51 +250,50 @@ class AnalyticsScreen extends StatelessWidget {
                         itemBuilder: (context, index) {
                           final category = sortedCategories[index];
                           final amount = expenses[category]!;
-                          final percentage =
-                              totalExpense > 0 ? (amount / totalExpense) : 0.0;
+                          final percentage = totalExpense > 0 ? (amount / totalExpense) : 0.0;
+                          final color = _chartColors[index % _chartColors.length];
 
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 12.0),
+                            padding: const EdgeInsets.only(bottom: 10.0),
                             child: Container(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(12),
                               decoration: RetroTheme.retroBoxDecoration(color: Colors.white),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Row(
                                 children: [
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        category,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                          color: RetroTheme.darkCharcoal,
-                                        ),
-                                      ),
-                                      Text(
-                                        '${currencyFormat.format(amount)} (${(percentage * 100).toStringAsFixed(1)}%)',
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                          color: RetroTheme.primaryBlue,
-                                        ),
-                                      ),
-                                    ],
+                                  Container(
+                                    width: 14,
+                                    height: 14,
+                                    decoration: BoxDecoration(
+                                      color: color,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
-                                  const SizedBox(height: 10),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: LinearProgressIndicator(
-                                      value: percentage.clamp(0.0, 1.0),
-                                      minHeight: 8,
-                                      backgroundColor: const Color(0xFFF1F5F9),
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        index % 2 == 0
-                                            ? const Color(0xFF0284C7)
-                                            : const Color(0xFF38BDF8),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      category,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: RetroTheme.darkCharcoal,
                                       ),
+                                    ),
+                                  ),
+                                  Text(
+                                    '${(percentage * 100).toStringAsFixed(1)}%',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                      color: RetroTheme.textSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    currencyFormat.format(amount),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: RetroTheme.darkCharcoal,
                                     ),
                                   ),
                                 ],
@@ -177,5 +308,293 @@ class AnalyticsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Embedded Chart Legend Component
+  Widget _buildChartLegend(List<String> sortedCategories) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 14,
+      runSpacing: 8,
+      children: List.generate(sortedCategories.length, (index) {
+        final category = sortedCategories[index];
+        final color = _chartColors[index % _chartColors.length];
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 10,
+              height: 10,
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Text(
+              category,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: RetroTheme.darkCharcoal,
+              ),
+            ),
+          ],
+        );
+      }),
+    );
+  }
+
+  Widget _buildDonutChart(List<String> sortedCategories, Map<String, double> expenses) {
+    final values = sortedCategories.map((c) => expenses[c]!).toList();
+    final colors = List.generate(
+      sortedCategories.length,
+      (i) => _chartColors[i % _chartColors.length],
+    );
+
+    return SizedBox(
+      height: 200,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: const Size(200, 200),
+            painter: _DonutChartPainter(
+              values: values,
+              colors: colors,
+              total: totalExpense,
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Pengeluaran',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: RetroTheme.textSecondary,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${sortedCategories.length} Kategori',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: RetroTheme.darkCharcoal,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBarChart(
+    List<String> sortedCategories,
+    Map<String, double> expenses,
+    NumberFormat currencyFormat,
+  ) {
+    final maxVal = expenses.values.reduce(max);
+    final percentageLabels = ['100%', '75%', '50%', '25%', '0%'];
+
+    return SizedBox(
+      height: 190,
+      child: Stack(
+        children: [
+          // Percentage Gridlines with Label Texts (100%, 75%, 50%, 25%, 0%)
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 24.0, top: 16.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(5, (index) {
+                  return Row(
+                    children: [
+                      SizedBox(
+                        width: 32,
+                        child: Text(
+                          percentageLabels[index],
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: RetroTheme.textSecondary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Container(
+                          height: 1,
+                          color: const Color(0xFFF1F5F9),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ),
+            ),
+          ),
+          // Bar Chart Columns with left offset to make room for percentage labels
+          Padding(
+            padding: const EdgeInsets.only(left: 36.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: List.generate(sortedCategories.length, (index) {
+                final category = sortedCategories[index];
+                final amount = expenses[category]!;
+                final ratio = maxVal > 0 ? (amount / maxVal) : 0.0;
+                final color = _chartColors[index % _chartColors.length];
+
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      '${(amount / 1000).toStringAsFixed(0)}rb',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: RetroTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: 24,
+                      height: max(12.0, 110 * ratio),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withAlpha(80),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: 44,
+                      child: Text(
+                        category,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: RetroTheme.darkCharcoal,
+                        ),
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Custom Painter untuk grafik Donut / Pie Chart dengan Garis Penunjuk & Label Persentase (%)
+class _DonutChartPainter extends CustomPainter {
+  final List<double> values;
+  final List<Color> colors;
+  final double total;
+
+  _DonutChartPainter({
+    required this.values,
+    required this.colors,
+    required this.total,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (total <= 0 || values.isEmpty) return;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = min(size.width, size.height) / 2.3;
+    const strokeWidth = 22.0;
+
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.butt;
+
+    double startAngle = -pi / 2;
+
+    for (int i = 0; i < values.length; i++) {
+      final sweepAngle = (values[i] / total) * 2 * pi;
+      paint.color = colors[i];
+
+      // Draw Arc
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius - (strokeWidth / 2)),
+        startAngle,
+        sweepAngle - 0.03, // gap antar arc
+        false,
+        paint,
+      );
+
+      // Draw Percentage Callout Label Lines & Text
+      final percentage = (values[i] / total) * 100;
+      if (percentage >= 3.0) {
+        final midAngle = startAngle + (sweepAngle / 2);
+
+        // Callout Line start & end point
+        final lineStart = Offset(
+          center.dx + (radius + 2) * cos(midAngle),
+          center.dy + (radius + 2) * sin(midAngle),
+        );
+        final lineEnd = Offset(
+          center.dx + (radius + 12) * cos(midAngle),
+          center.dy + (radius + 12) * sin(midAngle),
+        );
+
+        final linePaint = Paint()
+          ..color = colors[i]
+          ..strokeWidth = 1.5
+          ..style = PaintingStyle.stroke;
+
+        canvas.drawLine(lineStart, lineEnd, linePaint);
+
+        // Percentage Text Label Badge
+        final textSpan = TextSpan(
+          text: '${percentage.toStringAsFixed(0)}%',
+          style: TextStyle(
+            color: colors[i],
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+          ),
+        );
+
+        final textPainter = TextPainter(
+          text: textSpan,
+          textDirection: ui.TextDirection.ltr,
+        );
+        textPainter.layout();
+
+        final labelPos = Offset(
+          lineEnd.dx - (textPainter.width / 2) + (cos(midAngle) * 8),
+          lineEnd.dy - (textPainter.height / 2) + (sin(midAngle) * 8),
+        );
+
+        textPainter.paint(canvas, labelPos);
+      }
+
+      startAngle += sweepAngle;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DonutChartPainter oldDelegate) {
+    return oldDelegate.values != values || oldDelegate.total != total;
   }
 }
