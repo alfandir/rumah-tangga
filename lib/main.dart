@@ -62,9 +62,9 @@ class _RumahTanggaAppState extends State<RumahTanggaApp> {
   ];
 
   final List<ShoppingItemModel> _shoppingItems = [
-    ShoppingItemModel(id: 's1', title: 'Beras 5kg', category: 'Dapur', isCompleted: false),
-    ShoppingItemModel(id: 's2', title: 'Minyak Goreng 2L', category: 'Dapur', isCompleted: true),
-    ShoppingItemModel(id: 's3', title: 'Sabun Cuci Piring', category: 'Bersih-Bersih', isCompleted: false),
+    ShoppingItemModel(id: 's1', title: 'Beras 5kg', category: 'Dapur', price: 75000, date: DateTime.now(), isCompleted: false),
+    ShoppingItemModel(id: 's2', title: 'Minyak Goreng 2L', category: 'Dapur', price: 35000, date: DateTime.now(), isCompleted: true),
+    ShoppingItemModel(id: 's3', title: 'Sabun Cuci Piring', category: 'Bersih-Bersih', price: 15000, date: DateTime.now(), isCompleted: false),
   ];
 
   final List<ElectricityRecordModel> _electricityRecords = [
@@ -127,7 +127,28 @@ class _RumahTanggaAppState extends State<RumahTanggaApp> {
     setState(() {
       final index = _shoppingItems.indexWhere((s) => s.id == id);
       if (index != -1) {
-        _shoppingItems[index].isCompleted = !_shoppingItems[index].isCompleted;
+        final item = _shoppingItems[index];
+        final newStatus = !item.isCompleted;
+        item.isCompleted = newStatus;
+
+        final txId = 'shop_tx_${item.id}';
+        if (newStatus && item.price > 0) {
+          // Otomatis buat pengeluaran yang memotong saldo/pemasukan!
+          _transactions.removeWhere((tx) => tx.id == txId);
+          _transactions.add(
+            TransactionModel(
+              id: txId,
+              title: 'Belanja: ${item.title}',
+              amount: item.price,
+              date: DateTime.now(),
+              type: TransactionType.expense,
+              category: 'Belanja',
+            ),
+          );
+        } else {
+          // Hapus pengeluaran jika batal dibeli
+          _transactions.removeWhere((tx) => tx.id == txId);
+        }
       }
     });
   }
@@ -135,13 +156,13 @@ class _RumahTanggaAppState extends State<RumahTanggaApp> {
   void _deleteShoppingItem(String id) {
     setState(() {
       _shoppingItems.removeWhere((s) => s.id == id);
+      _transactions.removeWhere((tx) => tx.id == 'shop_tx_$id');
     });
   }
 
   void _addElectricityRecord(ElectricityRecordModel record) {
     setState(() {
       _electricityRecords.add(record);
-      // Juga tambahkan otomatis ke pengeluaran!
       _transactions.add(
         TransactionModel(
           id: record.id,

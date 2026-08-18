@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/shopping_item_model.dart';
 import '../theme/theme.dart';
 import 'shopping_detail_screen.dart';
@@ -23,6 +24,7 @@ class ShoppingListScreen extends StatefulWidget {
 
 class _ShoppingListScreenState extends State<ShoppingListScreen> {
   final _titleController = TextEditingController();
+  final _priceController = TextEditingController();
   String _selectedCategory = 'Dapur';
 
   final List<String> _categories = ['Dapur', 'Mandi', 'Bersih-Bersih', 'Lainnya'];
@@ -30,10 +32,26 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    _priceController.dispose();
     super.dispose();
   }
 
+  double get totalMonthlyEstimate {
+    final now = DateTime.now();
+    return widget.items
+        .where((item) => item.date.month == now.month && item.date.year == now.year)
+        .fold(0.0, (sum, item) => sum + item.price);
+  }
+
+  double get totalMonthlyPurchased {
+    final now = DateTime.now();
+    return widget.items
+        .where((item) => item.isCompleted && item.date.month == now.month && item.date.year == now.year)
+        .fold(0.0, (sum, item) => sum + item.price);
+  }
+
   void _showAddDialog() {
+    _priceController.text = '';
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -55,7 +73,16 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               TextField(
                 controller: _titleController,
                 decoration: InputDecoration(
-                  labelText: 'Nama Barang (contoh: Minyak Goreng)',
+                  labelText: 'Nama Barang (contoh: Beras 5kg)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _priceController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: 'Estimasi Harga / Biaya (Rp)',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
               ),
@@ -97,20 +124,25 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               ),
               onPressed: () {
                 final title = _titleController.text;
+                final priceVal = double.tryParse(_priceController.text) ?? 0.0;
+
                 if (title.isNotEmpty) {
                   widget.onAddItem(
                     ShoppingItemModel(
                       id: DateTime.now().toString(),
                       title: title,
                       category: _selectedCategory,
+                      price: priceVal,
+                      date: DateTime.now(),
                     ),
                   );
                   _titleController.clear();
+                  _priceController.clear();
                   Navigator.of(ctx).pop();
                 }
               },
               child: const Text(
-                'Simpan',
+                'Simpan Barang',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -123,8 +155,24 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
     );
   }
 
+  String _formatMonth(DateTime date) {
+    try {
+      return DateFormat('MMMM yyyy', 'id_ID').format(date);
+    } catch (_) {
+      return DateFormat('MMM yyyy').format(date);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+
+    final monthName = _formatMonth(DateTime.now());
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -148,8 +196,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
             ),
             const SizedBox(width: 12),
             Text(
-              'Catatan Belanja Dapur & Rumah',
-              style: Theme.of(context).textTheme.headlineMedium,
+              'Belanja Bulanan ($monthName)',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontSize: 16),
             ),
           ],
         ),
@@ -157,135 +205,215 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: widget.items.isEmpty
-              ? Center(
-                  child: Text(
-                    'Belum ada daftar belanjaan',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                )
-              : ListView.builder(
-                  itemCount: widget.items.length,
-                  itemBuilder: (context, index) {
-                    final item = widget.items[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 10.0),
-                      child: InkWell(
-                        onTap: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => ShoppingDetailScreen(
-                                item: item,
-                                onToggleComplete: (id) {
-                                  widget.onToggleComplete(id);
-                                  setState(() {});
-                                },
-                                onDelete: widget.onDeleteItem,
-                              ),
-                            ),
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: RetroTheme.retroBoxDecoration(
-                            color: item.isCompleted
-                                ? const Color(0xFFF8FAFC)
-                                : Colors.white,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Monthly Summary Card
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: RetroTheme.retroBoxDecoration(color: Colors.white),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Column(
+                      children: [
+                        const Text(
+                          'Estimasi Belanja',
+                          style: TextStyle(fontSize: 12, color: RetroTheme.textSecondary),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          currencyFormat.format(totalMonthlyEstimate),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: RetroTheme.darkCharcoal,
                           ),
-                          child: Row(
-                            children: [
-                              GestureDetector(
-                                onTap: () => widget.onToggleComplete(item.id),
-                                child: Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
-                                    color: item.isCompleted
-                                        ? const Color(0xFF0284C7)
-                                        : Colors.white,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: item.isCompleted
-                                          ? const Color(0xFF0284C7)
-                                          : const Color(0xFFCBD5E1),
-                                      width: 2,
+                        ),
+                      ],
+                    ),
+                    Container(width: 1, height: 36, color: RetroTheme.borderLight),
+                    Column(
+                      children: [
+                        const Text(
+                          'Sudah Dibeli (Potong Saldo)',
+                          style: TextStyle(fontSize: 12, color: RetroTheme.textSecondary),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          currencyFormat.format(totalMonthlyPurchased),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF059669),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              Expanded(
+                child: widget.items.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Belum ada daftar belanjaan bulan ini',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: widget.items.length,
+                        itemBuilder: (context, index) {
+                          final item = widget.items[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10.0),
+                            child: InkWell(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => ShoppingDetailScreen(
+                                      item: item,
+                                      onToggleComplete: (id) {
+                                        widget.onToggleComplete(id);
+                                        setState(() {});
+                                      },
+                                      onDelete: widget.onDeleteItem,
                                     ),
                                   ),
-                                  child: item.isCompleted
-                                      ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
-                                      : null,
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(16),
+                              child: Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: RetroTheme.retroBoxDecoration(
+                                  color: item.isCompleted
+                                      ? const Color(0xFFF8FAFC)
+                                      : Colors.white,
                                 ),
-                              ),
-                              const SizedBox(width: 14),
-                              Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      item.title,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                        color: item.isCompleted
-                                            ? RetroTheme.textSecondary
-                                            : RetroTheme.darkCharcoal,
-                                        decoration: item.isCompleted
-                                            ? TextDecoration.lineThrough
-                                            : TextDecoration.none,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF1F5F9),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        'Kategori: ${item.category}',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: RetroTheme.textSecondary,
-                                          fontWeight: FontWeight.w500,
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Expanded(
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFF1F5F9),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              '🛒 ${item.category}',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: RetroTheme.textSecondary,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 8),
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: item.isCompleted
+                                                    ? const Color(0xFFECFDF5)
+                                                    : const Color(0xFFFFF7ED),
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: Text(
+                                                item.isCompleted ? '✔ Sudah Dibeli' : '⏳ Belum Dibeli',
+                                                style: TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 11,
+                                                  color: item.isCompleted
+                                                      ? const Color(0xFF047857)
+                                                      : const Color(0xFFC2410C),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Icon(
+                                              Icons.chevron_right_rounded,
+                                              color: Color(0xFF94A3B8),
+                                              size: 20,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 10),
+                                    Row(
+                                      children: [
+                                        GestureDetector(
+                                          onTap: () => widget.onToggleComplete(item.id),
+                                          child: Container(
+                                            width: 24,
+                                            height: 24,
+                                            decoration: BoxDecoration(
+                                              color: item.isCompleted
+                                                  ? const Color(0xFF0284C7)
+                                                  : Colors.white,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: item.isCompleted
+                                                    ? const Color(0xFF0284C7)
+                                                    : const Color(0xFFCBD5E1),
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: item.isCompleted
+                                                ? const Icon(Icons.check_rounded, color: Colors.white, size: 16)
+                                                : null,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            item.title,
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                              color: item.isCompleted
+                                                  ? RetroTheme.textSecondary
+                                                  : RetroTheme.darkCharcoal,
+                                              decoration: item.isCompleted
+                                                  ? TextDecoration.lineThrough
+                                                  : TextDecoration.none,
+                                            ),
+                                          ),
+                                        ),
+                                        if (item.price > 0)
+                                          Text(
+                                            currencyFormat.format(item.price),
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                              color: item.isCompleted
+                                                  ? const Color(0xFF059669)
+                                                  : RetroTheme.darkCharcoal,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ],
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: item.isCompleted
-                                      ? const Color(0xFFECFDF5)
-                                      : const Color(0xFFFFF7ED),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  item.isCompleted ? 'Sudah Dibeli' : 'Belum',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    color: item.isCompleted
-                                        ? const Color(0xFF047857)
-                                        : const Color(0xFFC2410C),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.chevron_right_rounded,
-                                color: Color(0xFF94A3B8),
-                                size: 20,
-                              ),
-                            ],
-                          ),
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+              ),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/shopping_item_model.dart';
 import '../theme/theme.dart';
 
@@ -92,7 +93,9 @@ class _ShoppingDetailScreenState extends State<ShoppingDetailScreen> {
                   children: [
                     _buildDetailRow('Kategori', widget.item.category),
                     const Divider(color: RetroTheme.borderLight, height: 24),
-                    _buildDetailRow('Status Belanja', isCompleted ? 'Selesai' : 'Belum Selesai'),
+                    _buildDetailRow('Estimasi Harga', NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(widget.item.price)),
+                    const Divider(color: RetroTheme.borderLight, height: 24),
+                    _buildDetailRow('Status Belanja', isCompleted ? 'Sudah Dibeli (Potong Saldo)' : 'Belum Dibeli'),
                   ],
                 ),
               ),
