@@ -3,11 +3,13 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'models/transaction_model.dart';
 import 'models/bill_model.dart';
 import 'models/shopping_item_model.dart';
+import 'models/electricity_record_model.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/add_transaction_screen.dart';
 import 'screens/bills_screen.dart';
 import 'screens/shopping_list_screen.dart';
 import 'screens/analytics_screen.dart';
+import 'screens/electricity_screen.dart';
 import 'theme/theme.dart';
 
 void main() async {
@@ -65,6 +67,23 @@ class _RumahTanggaAppState extends State<RumahTanggaApp> {
     ShoppingItemModel(id: 's3', title: 'Sabun Cuci Piring', category: 'Bersih-Bersih', isCompleted: false),
   ];
 
+  final List<ElectricityRecordModel> _electricityRecords = [
+    ElectricityRecordModel(
+      id: 'e1',
+      purchaseDate: DateTime.now().subtract(const Duration(days: 30)),
+      amount: 100000,
+      tariffPerKwh: 1444.70,
+      powerVa: '1300 VA',
+    ),
+    ElectricityRecordModel(
+      id: 'e2',
+      purchaseDate: DateTime.now(),
+      amount: 100000,
+      tariffPerKwh: 1444.70,
+      powerVa: '1300 VA',
+    ),
+  ];
+
   void _addTransaction(TransactionModel tx) {
     setState(() {
       _transactions.add(tx);
@@ -119,6 +138,29 @@ class _RumahTanggaAppState extends State<RumahTanggaApp> {
     });
   }
 
+  void _addElectricityRecord(ElectricityRecordModel record) {
+    setState(() {
+      _electricityRecords.add(record);
+      // Juga tambahkan otomatis ke pengeluaran!
+      _transactions.add(
+        TransactionModel(
+          id: record.id,
+          title: 'Token Listrik PLN (${record.kwhObtained.toStringAsFixed(1)} kWh)',
+          amount: record.amount,
+          date: record.purchaseDate,
+          type: TransactionType.expense,
+          category: 'Listrik',
+        ),
+      );
+    });
+  }
+
+  void _deleteElectricityRecord(String id) {
+    setState(() {
+      _electricityRecords.removeWhere((e) => e.id == id);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final screens = [
@@ -133,6 +175,11 @@ class _RumahTanggaAppState extends State<RumahTanggaApp> {
             );
           },
           onDeleteTransaction: _deleteTransaction,
+          onOpenElectricity: () {
+            setState(() {
+              _currentIndex = 3; // Switch to Electricity Tab
+            });
+          },
         ),
       ),
       BillsScreen(
@@ -146,6 +193,11 @@ class _RumahTanggaAppState extends State<RumahTanggaApp> {
         onAddItem: _addShoppingItem,
         onToggleComplete: _toggleShoppingItem,
         onDeleteItem: _deleteShoppingItem,
+      ),
+      ElectricityScreen(
+        records: _electricityRecords,
+        onAddRecord: _addElectricityRecord,
+        onDeleteRecord: _deleteElectricityRecord,
       ),
       AnalyticsScreen(transactions: _transactions),
     ];
@@ -182,11 +234,11 @@ class _RumahTanggaAppState extends State<RumahTanggaApp> {
             elevation: 0,
             selectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.bold,
-              fontSize: 12,
+              fontSize: 11,
             ),
             unselectedLabelStyle: const TextStyle(
               fontWeight: FontWeight.normal,
-              fontSize: 12,
+              fontSize: 11,
             ),
             type: BottomNavigationBarType.fixed,
             items: const [
@@ -204,6 +256,11 @@ class _RumahTanggaAppState extends State<RumahTanggaApp> {
                 icon: Icon(Icons.shopping_cart_outlined),
                 activeIcon: Icon(Icons.shopping_cart_rounded),
                 label: 'Belanja',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.bolt_outlined),
+                activeIcon: Icon(Icons.bolt_rounded),
+                label: 'Listrik',
               ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.pie_chart_outline_rounded),

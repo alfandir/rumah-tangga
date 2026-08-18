@@ -9,6 +9,7 @@ class DashboardScreen extends StatelessWidget {
   final VoidCallback onNavigateToAdd;
   final Function(String) onDeleteTransaction;
   final double monthlyBudget;
+  final VoidCallback? onOpenElectricity;
 
   const DashboardScreen({
     super.key,
@@ -16,6 +17,7 @@ class DashboardScreen extends StatelessWidget {
     required this.onNavigateToAdd,
     required this.onDeleteTransaction,
     this.monthlyBudget = 3000000.0,
+    this.onOpenElectricity,
   });
 
   double get totalIncome => transactions
@@ -253,7 +255,7 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 14),
 
               // Modern Budget Progress Card
               Container(
@@ -294,7 +296,59 @@ class DashboardScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
+
+              // Electricity Estimator Quick Card
+              if (onOpenElectricity != null)
+                InkWell(
+                  onTap: onOpenElectricity,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFFBEB),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFFDE68A)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.bolt_rounded, color: Colors.white, size: 20),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Kalkulator Token & kWh Listrik',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                  color: Color(0xFF78350F),
+                                ),
+                              ),
+                              Text(
+                                'Hitung kWh & estimasi tanggal isi lagi',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF92400E),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded, color: Color(0xFF92400E)),
+                      ],
+                    ),
+                  ),
+                ),
+              const SizedBox(height: 16),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
